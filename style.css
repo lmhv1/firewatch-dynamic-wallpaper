@@ -1,0 +1,24 @@
+body {
+  margin: 0;
+  background-color: black;
+  overflow: hidden;
+}
+
+.wallpaper {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.fade {
+  animation: fade 10s linear;  
+}
+
+@keyframes fade {
+  from {opacity: 0;}
+  to {opacity: 1;}
+}
