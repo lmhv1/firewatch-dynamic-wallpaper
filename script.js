@@ -43,14 +43,16 @@ async function get(api, n = 10, wait = 1000) {
   }
 }
 
-function showNotification(error) {
+function showNotification(error, persist = false) {
   const debugElem = document.querySelector('.debug');
   logElem = document.createElement('p');
   logElem.innerText = error;
   debugElem.appendChild(logElem);
-  setTimeout(() => {
-    debugElem.innerHTML = '';
-  }, 5000);
+  if (!persist) {
+    setTimeout(() => {
+      debugElem.innerHTML = '';
+    }, 5000);
+  }
 }
 // end utils
 
@@ -99,8 +101,9 @@ async function getSunsetSunrise() {
 
 function setWallpaper(index) {
   const after = document.querySelector('#after');
-  if (index === after.dataset.id) return; // return if wallpaper already the same
+  if (index === parseInt(after.dataset.id)) return; // return if wallpaper already the same
 
+  // showNotification(`Changing wallpaper to ${wallpapers[index]}`, true);
   const mod = (n, m) => ((n % m) + m) % m; // wrap arround modulo
   document.querySelector('#before').style.backgroundImage = `url(wallpapers/${wallpapers[mod(index - 1, wallpapers.length)]}.jpg)`;
 
