@@ -9,6 +9,8 @@ const wallpapers = [
   '7_dusk'
 ];
 
+const infoContainer = document.querySelector('.info-container');
+
 let initial = true;
 let geoLocation;
 let cachedSunsetSunrise;
@@ -63,6 +65,9 @@ window.wallpaperPropertyListener = {
     if (properties.show_sunset_and_sunrise_times) {
       document.querySelector('#sunset-sunrise').hidden = !properties.show_sunset_and_sunrise_times.value;
     }
+    if (properties.info_size) {
+      infoContainer.style.transform = `scale(${properties.info_size.value})`;
+    }
   }
 }
 
@@ -93,13 +98,11 @@ async function getSunsetSunrise() {
 }
 
 function setWallpaper(index) {
-  const before = document.querySelector('#before');
   const after = document.querySelector('#after');
-
   if (index === after.dataset.id) return; // return if wallpaper already the same
 
   const mod = (n, m) => ((n % m) + m) % m; // wrap arround modulo
-  before.style.backgroundImage = `url(wallpapers/${wallpapers[mod(index - 1, wallpapers.length)]}.jpg)`;
+  document.querySelector('#before').style.backgroundImage = `url(wallpapers/${wallpapers[mod(index - 1, wallpapers.length)]}.jpg)`;
 
   const clone = after.cloneNode();
   clone.style.backgroundImage = `url(wallpapers/${wallpapers[mod(index, wallpapers.length)]}.jpg)`;
