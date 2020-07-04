@@ -36,7 +36,7 @@ body {
   right: 1rem;
   font-size: 2em;
   color: white;
-  mix-blend-mode: difference;
+  mix-blend-mode: soft-light;
   z-index: 0;
 }
 
