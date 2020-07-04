@@ -1,16 +1,18 @@
 const debugElem = document.querySelector('.debug');
-const cityElem = document.querySelector('.city');
-const placeholderElem = document.querySelector('#placeholder');
+const cityElem = document.querySelector('#city');
+const sunsetSunriseElem = document.querySelector('#sunset-sunrise');
+const sunriseElem = document.querySelector('#sunrise-time');
+const sunsetElem = document.querySelector('#sunset-time');
 
 const wallpapers = [
-  '0 night',
-  '1 twilight start',
-  '2 sunrise',
-  '3 morning',
-  '4 noon',
-  '5 afternoon',
-  '6 sunset',
-  '7 twilight end'
+  '0_night',
+  '1_dawn',
+  '2_sunrise',
+  '3_early_morning',
+  '4_day',
+  '5_golden_hour',
+  '6_sunset',
+  '7_dusk'
 ];
 
 let initial = true;
@@ -49,7 +51,12 @@ window.wallpaperPropertyListener = {
     if (properties.city) {
       updateCity(properties.city.value)
     }
-    cityElem.hidden = !properties.show_city.value;
+    if (properties.show_city) {
+      cityElem.hidden = !properties.show_city.value;
+    }
+    if (properties.show_sunset_and_sunrise_times) {
+      sunsetSunriseElem.hidden = !properties.show_sunset_and_sunrise_times.value;
+    }
   }
 }
 
@@ -80,53 +87,49 @@ function setWallpaper(index) {
   if (index === after.dataset.id) return; // return if wallpaper already the same
 
   const mod = (n, m) => ((n % m) + m) % m; // wrap arround modulo
-  before.style.backgroundImage = `url("wallpapers/${wallpapers[mod(index - 1, wallpapers.length)]}.jpg")`;
+  before.style.backgroundImage = `url(wallpapers/${wallpapers[mod(index - 1, wallpapers.length)]}.jpg)`;
 
   const clone = after.cloneNode();
-  clone.style.backgroundImage = `url("wallpapers/${wallpapers[index]}.jpg")`;
+  clone.style.backgroundImage = `url(wallpapers/${wallpapers[index]}.jpg)`;
   clone.dataset.id = index;
   if (!initial) {
     initial = false;
     clone.classList.add('slow-fade-in');
   }
   after.parentNode.replaceChild(clone, after);
-  placeholderElem.style.opacity = 0;
+  document.querySelector('#placeholder').style.opacity = 0;
 }
 
 async function render() {
   const data = await getSunsetSunrise();
   if (data.length === 0) return;
 
-  const { sunrise, sunset, civil_twilight_begin, civil_twilight_end } = data.results;
+  const { sunrise, sunset, civil_twilight_begin, civil_twilight_end, solar_noon } = data.results;
 
-  const sunriseStart = moment.utc(sunrise).subtract(30, 'minutes');
-  const sunriseEnd = moment.utc(sunrise).add(30, 'minutes');
-  const sunsetStart = moment.utc(sunset).subtract(30, 'minutes');
-  const sunsetEnd = moment.utc(sunset).add(30, 'minutes');
-
-  const currTime = moment.utc();
-
-  if (currTime.isBefore(moment.utc(civil_twilight_begin))) {
-    setWallpaper(0);
-  } else if (currTime.isBefore(sunriseStart)) {
-    setWallpaper(1);
-  } else if (currTime.isBefore(sunriseEnd)) {
-    setWallpaper(2);
-  } else if (currTime.isBefore(sunriseEnd.add(1, 'hour'))) {
-    setWallpaper(3);
-  } else if (currTime.isBefore(sunsetStart.subtract(1, 'hour'))) {
-    setWallpaper(4);
-  } else if (currTime.isBefore(sunsetStart)) {
-    setWallpaper(5);
-  } else if (currTime.isBefore(sunsetEnd)) {
-    setWallpaper(6);
-  } else if (currTime.isBefore(moment.utc(civil_twilight_end))) {
-    setWallpaper(7);
+  const now = moment().add(10, 'minutes'); // account for 10 min transitions
+  if (now.isBefore(moment(civil_twilight_begin))) {
+    setWallpaper(0); // night
+  } else if (now.isBefore(moment(sunrise))) {
+    setWallpaper(1); // dawn
+  } else if (now.isBefore(moment(sunrise).add(30, 'minutes'))) {
+    setWallpaper(2); // sunrise
+  } else if (now.isBefore(moment(solar_noon))) {
+    setWallpaper(3); // early morning
+  } else if (now.isBefore(moment(sunset).subtract(30, 'minutes'))) {
+    setWallpaper(4); // day
+  } else if (now.isBefore(moment(sunset))) {
+    setWallpaper(5); // golden hour
+  } else if (now.isBefore(moment(sunset).add(30, 'minutes'))) {
+    setWallpaper(6); // sunset
+  } else if (now.isBefore(moment(civil_twilight_end))) {
+    setWallpaper(7); // dusk
   } else {
     setWallpaper(0);
   }
 
   cityElem.innerText = `${geoLocation.city}, ${geoLocation.country}`;
+  sunriseElem.innerText = moment(sunrise).format('h:mm A');
+  sunsetElem.innerText = moment(sunset).format('h:mm A');
 }
 
 (function loop() {

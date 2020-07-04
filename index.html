@@ -8,7 +8,19 @@
 <body>
   <div class="wallpaper" id="before"></div>
   <div class="wallpaper" id="after"></div>
-  <div class="city"></div>
+  <div class="info-container">
+    <div id="city"></div>
+    <table id="sunset-sunrise">
+      <tr>
+        <td><img src="assets/sunrise.svg" alt="sunrise icon" /></td>
+        <td id="sunrise-time"></td>
+      </tr>
+      <tr>
+        <td><img src="assets/sunset.svg" alt="sunset icon" /></td>
+        <td id="sunset-time"></td>
+      </tr>
+    </table>
+  </div>
   <div class="wallpaper" id="placeholder" style="background-image: url('wallpapers/placeholder.jpg')"></div>
   <div class="debug"></div>
   <script src="script.js"></script>
