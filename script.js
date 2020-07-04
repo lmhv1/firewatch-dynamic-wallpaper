@@ -1,3 +1,7 @@
+const debugElem = document.querySelector('.debug');
+const cityElem = document.querySelector('.city');
+const placeholderElem = document.querySelector('#placeholder');
+
 const wallpapers = [
   '0 night',
   '1 twilight start',
@@ -10,10 +14,63 @@ const wallpapers = [
 ];
 
 let initial = true;
+let geoLocation;
+
+// start utils
+function debounce(callback, wait) {
+  let timeout;
+  return (...args) => {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => callback.apply(context, args), wait);
+  };
+}
+
+async function get(api) {
+  const response = await fetch(api);
+  if (response.ok) {
+    return response.json();
+  }
+  logError(`Failed to GET from ${api}`);
+}
+
+function logError(error) {
+  logElem = document.createElement('p');
+  logElem.innerText = error;
+  debugElem.appendChild(logElem);
+  setTimeout(() => {
+    debugElem.innerHTML = '';
+  }, 5000);
+}
+// end utils
+
+window.wallpaperPropertyListener = {
+  applyUserProperties: properties => {
+    if (properties.city) {
+      updateCity(properties.city.value)
+    }
+    cityElem.hidden = !properties.show_city.value;
+  }
+}
+
+const updateCity = debounce(async (city) => {
+  const data = await get(`https://nominatim.openstreetmap.org/search/${city}?format=json&addressdetails=1&limit=1`);
+  try {
+    geoLocation = { lat: data[0].lat, lon: data[0].lon, city: data[0].address.city, country: data[0].address.country };
+    initial = true; // force immediate transition without fade
+    render();
+  } catch (e) {
+    logError(`Could not find city "${city}"`);
+  }
+}, 2000);
 
 async function getSunsetSunrise() {
-  const response = await fetch('https://api.sunrise-sunset.org/json?lat=49.2608724&lng=-123.1139529&formatted=0');
-  return response.json();
+  try {
+    return await get(`https://api.sunrise-sunset.org/json?lat=${geoLocation.lat}&lng=${geoLocation.lon}&date=${moment().format('YYYY-MM-DD')}&formatted=0`);
+  } catch (e) {
+    // geoLocation not initialized
+    return [];
+  }
 }
 
 function setWallpaper(index) {
@@ -29,48 +86,50 @@ function setWallpaper(index) {
   clone.style.backgroundImage = `url("wallpapers/${wallpapers[index]}.jpg")`;
   clone.dataset.id = index;
   if (!initial) {
-    clone.classList.add('fade');
     initial = false;
+    clone.classList.add('slow-fade-in');
   }
   after.parentNode.replaceChild(clone, after);
+  placeholderElem.style.opacity = 0;
 }
 
-function main() {
-  getSunsetSunrise().then(data => {
-    const { sunrise, sunset, civil_twilight_begin, civil_twilight_end } = data.results;
+async function render() {
+  const data = await getSunsetSunrise();
+  if (data.length === 0) return;
 
-    const sunriseStart = new Date(new Date(sunrise).getTime() - 30 * 60000);
-    const sunriseEnd = new Date(new Date(sunrise).getTime() + 30 * 60000);
-    const sunsetStart = new Date(new Date(sunset).getTime() - 30 * 60000);
-    const sunsetEnd = new Date(new Date(sunset).getTime() + 30 * 60000);
-    const dayThirds = (sunsetStart.getTime() - sunriseEnd.getTime()) / 3;
+  const { sunrise, sunset, civil_twilight_begin, civil_twilight_end } = data.results;
 
-    // const currTime = new Date('July 3, 2020 4:31:04');
-    const currTime = new Date();
+  const sunriseStart = moment.utc(sunrise).subtract(30, 'minutes');
+  const sunriseEnd = moment.utc(sunrise).add(30, 'minutes');
+  const sunsetStart = moment.utc(sunset).subtract(30, 'minutes');
+  const sunsetEnd = moment.utc(sunset).add(30, 'minutes');
 
-    if (currTime < new Date(civil_twilight_begin)) {
-      setWallpaper(0);
-    } else if (currTime < sunriseStart) {
-      setWallpaper(1);
-    } else if (currTime < sunriseEnd) {
-      setWallpaper(2);
-    } else if (currTime < new Date(sunriseEnd.getTime() + dayThirds)) {
-      setWallpaper(3);
-    } else if (currTime < new Date(sunriseEnd.getTime() + dayThirds * 2)) {
-      setWallpaper(4);
-    } else if (currTime < sunsetStart) {
-      setWallpaper(5);
-    } else if (currTime < sunsetEnd) {
-      setWallpaper(6);
-    } else if (currTime < new Date(civil_twilight_end)) {
-      setWallpaper(7);
-    } else {
-      setWallpaper(0);
-    }
-  });
+  const currTime = moment.utc();
+
+  if (currTime.isBefore(moment.utc(civil_twilight_begin))) {
+    setWallpaper(0);
+  } else if (currTime.isBefore(sunriseStart)) {
+    setWallpaper(1);
+  } else if (currTime.isBefore(sunriseEnd)) {
+    setWallpaper(2);
+  } else if (currTime.isBefore(sunriseEnd.add(1, 'hour'))) {
+    setWallpaper(3);
+  } else if (currTime.isBefore(sunsetStart.subtract(1, 'hour'))) {
+    setWallpaper(4);
+  } else if (currTime.isBefore(sunsetStart)) {
+    setWallpaper(5);
+  } else if (currTime.isBefore(sunsetEnd)) {
+    setWallpaper(6);
+  } else if (currTime.isBefore(moment.utc(civil_twilight_end))) {
+    setWallpaper(7);
+  } else {
+    setWallpaper(0);
+  }
+
+  cityElem.innerText = `${geoLocation.city}, ${geoLocation.country}`;
 }
 
 (function loop() {
-  main();
+  render();
   setTimeout(loop, 60 * 1000 * 10); // every 10 minutes
 })();
