@@ -75,11 +75,18 @@ window.wallpaperPropertyListener = {
 
 const updateCity = debounce(async (city) => {
   try {
-    const data = await get(`https://nominatim.openstreetmap.org/search/${city}?format=json&addressdetails=1&limit=1`);
-    geoLocation = { lat: data[0].lat, lon: data[0].lon, city: data[0].address.city, country: data[0].address.country };
-    initial = true; // force immediate transition without fade
-    cachedSunsetSunrise = null; // flush cached times
-    render();
+    const data = await get(`https://nominatim.openstreetmap.org/search/${city}?format=json&addressdetails=1`);
+
+    for (const location of data) {
+      if ('city' in location.address) {
+        geoLocation = { lat: location.lat, lon: location.lon, city: location.address.city, country: location.address.country, state: location.address.state };
+        initial = true; // force immediate transition without fade
+        cachedSunsetSunrise = null; // flush cached times
+        render();
+        return;
+      }
+    }
+    throw new Error('No city in search results');
   } catch (e) {
     showNotification(`Coudn't find city: ${city}`);
   }
@@ -103,7 +110,6 @@ function setWallpaper(index) {
   const after = document.querySelector('#after');
   if (index === parseInt(after.dataset.id)) return; // return if wallpaper already the same
 
-  // showNotification(`Changing wallpaper to ${wallpapers[index]}`, true);
   const mod = (n, m) => ((n % m) + m) % m; // wrap arround modulo
   document.querySelector('#before').style.backgroundImage = `url(wallpapers/${wallpapers[mod(index - 1, wallpapers.length)]}.jpg)`;
 
@@ -153,7 +159,7 @@ async function render() {
     setWallpaper(0); // night
   }
 
-  document.querySelector('#city').innerText = `${geoLocation.city}, ${geoLocation.country}`;
+  document.querySelector('#city').innerText = getDisplayName();
   document.querySelector('#sunrise-time').innerText = moment(sunrise).format('h:mm A');
   document.querySelector('#sunset-time').innerText = moment(sunset).format('h:mm A');
 }
@@ -162,3 +168,80 @@ async function render() {
   render();
   setTimeout(loop, 60 * 1000 * 10); // every 10 minutes
 })();
+
+// My poor man's {City}, {State Code || Country} API
+function getDisplayName() {
+  if (geoLocation.city === 'Washington D.C.') {
+    return 'Washington D.C.';
+  }
+  if (geoLocation.state && (geoLocation.country === 'United States of America' || geoLocation.country === 'Canada')) {
+    return `${geoLocation.city}, ${stateCodes[geoLocation.state]}`;
+  }
+  return `${geoLocation.city}, ${geoLocation.country}`
+}
+
+const stateCodes = {
+  "Alabama": "AL",
+  "Alaska": "AK",
+  "Arizona": "AZ",
+  "Arkansas": "AR",
+  "California": "CA",
+  "Colorado": "CO",
+  "Connecticut": "CT",
+  "Delaware": "DE",
+  "Florida": "FL",
+  "Georgia": "GA",
+  "Hawaii": "HI",
+  "Idaho": "ID",
+  "Illinois": "IL",
+  "Indiana": "IN",
+  "Iowa": "IA",
+  "Kansas": "KS",
+  "Kentucky": "KY",
+  "Louisiana": "LA",
+  "Maine": "ME",
+  "Maryland": "MD",
+  "Massachusetts": "MA",
+  "Michigan": "MI",
+  "Minnesota": "MN",
+  "Mississippi": "MS",
+  "Missouri": "MO",
+  "Montana": "MT",
+  "Nebraska": "NE",
+  "Nevada": "NV",
+  "New Hampshire": "NH",
+  "New Jersey": "NJ",
+  "New Mexico": "NM",
+  "New York": "NY",
+  "North Carolina": "NC",
+  "North Dakota": "ND",
+  "Ohio": "OH",
+  "Oklahoma": "OK",
+  "Oregon": "OR",
+  "Pennsylvania": "PA",
+  "Rhode Island": "RI",
+  "South Carolina": "SC",
+  "South Dakota": "SD",
+  "Tennessee": "TN",
+  "Texas": "TX",
+  "Utah": "UT",
+  "Vermont": "VT",
+  "Virginia": "VA",
+  "Washington": "WA",
+  "West Virginia": "WV",
+  "Wisconsin": "WI",
+  "Wyoming": "WY",
+  "Newfoundland and Labrador": "NL",
+  "Prince Edward Island": "PE",
+  "Nova Scotia": "NS",
+  "New Brunswick": "NB",
+  "Quebec": "QC",
+  "Ontario": "ON",
+  "Manitoba": "MB",
+  "Saskatchewan": "SK",
+  "Alberta": "AB",
+  "British Columbia": "BC",
+  "Yukon": "YT",
+  "Northwest Territories": "NT",
+  "Nunavut": "NU"
+}
