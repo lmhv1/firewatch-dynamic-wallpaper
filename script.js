@@ -11,7 +11,6 @@ const wallpapers = [
 
 const infoContainer = document.querySelector('.info-container');
 
-let initial = true;
 let geoLocation;
 let cachedSunsetSunrise;
 
@@ -70,6 +69,11 @@ window.wallpaperPropertyListener = {
     if (properties.info_size) {
       infoContainer.style.transform = `scale(${properties.info_size.value})`;
     }
+  },
+  setPaused: pauseStatus => {
+    if (!pauseStatus) {
+      render();
+    }
   }
 }
 
@@ -80,9 +84,8 @@ const updateCity = debounce(async (city) => {
     for (const location of data) {
       if ('city' in location.address) {
         geoLocation = { lat: location.lat, lon: location.lon, city: location.address.city, country: location.address.country, state: location.address.state };
-        initial = true; // force immediate transition without fade
         cachedSunsetSunrise = null; // flush cached times
-        render();
+        render(true); // force immediate transition without fade
         return;
       }
     }
@@ -106,7 +109,7 @@ async function getSunsetSunrise() {
   return data;
 }
 
-function setWallpaper(index) {
+function setWallpaper(index, initial) {
   const after = document.querySelector('#after');
   if (index === parseInt(after.dataset.id)) return; // return if wallpaper already the same
 
@@ -121,10 +124,9 @@ function setWallpaper(index) {
   }
   after.parentNode.replaceChild(clone, after);
   document.querySelector('#placeholder').style.opacity = 0;
-  initial = false;
 }
 
-async function render() {
+async function render(initial = false) {
   let data;
   if (cachedSunsetSunrise && cachedSunsetSunrise.time.isSame(moment(), 'day')) {
     data = cachedSunsetSunrise.data;
@@ -140,23 +142,23 @@ async function render() {
   const now = moment().add(10, 'minutes'); // account for 10 min transitions
 
   if (now.isBefore(moment(civil_twilight_begin))) {
-    setWallpaper(0); // night
+    setWallpaper(0, initial); // night
   } else if (now.isBefore(moment(sunrise))) {
-    setWallpaper(1); // dawn
+    setWallpaper(1, initial); // dawn
   } else if (now.isBefore(moment(sunrise).add(30, 'minutes'))) {
-    setWallpaper(2); // sunrise
+    setWallpaper(2, initial); // sunrise
   } else if (now.isBefore(moment(solar_noon))) {
-    setWallpaper(3); // early morning
+    setWallpaper(3, initial); // early morning
   } else if (now.isBefore(moment(sunset).subtract(30, 'minutes'))) {
-    setWallpaper(4); // day
+    setWallpaper(4, initial); // day
   } else if (now.isBefore(moment(sunset))) {
-    setWallpaper(5); // golden hour
+    setWallpaper(5, initial); // golden hour
   } else if (now.isBefore(moment(sunset).add(30, 'minutes'))) {
-    setWallpaper(6); // sunset
+    setWallpaper(6, initial); // sunset
   } else if (now.isBefore(moment(civil_twilight_end))) {
-    setWallpaper(7); // dusk
+    setWallpaper(7, initial); // dusk
   } else {
-    setWallpaper(0); // night
+    setWallpaper(0, initial); // night
   }
 
   document.querySelector('#city').innerText = getDisplayName();
