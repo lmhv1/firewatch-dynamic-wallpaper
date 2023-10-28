@@ -79,7 +79,7 @@ window.wallpaperPropertyListener = {
 
 const updateCity = debounce(async (city) => {
   try {
-    const data = await get(`https://nominatim.openstreetmap.org/search/${city}?format=json&addressdetails=1`);
+    const data = await get(`https://nominatim.openstreetmap.org/search?q=${city}&format=json&addressdetails=1`);
 
     for (const location of data) {
       if ('city' in location.address) {
