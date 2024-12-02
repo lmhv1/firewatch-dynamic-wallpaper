@@ -82,8 +82,10 @@ const updateCity = debounce(async (city) => {
     const data = await get(`https://nominatim.openstreetmap.org/search?q=${city}&format=json&addressdetails=1`);
 
     for (const location of data) {
-      if ('city' in location.address) {
-        geoLocation = { lat: location.lat, lon: location.lon, city: location.address.city, country: location.address.country, state: location.address.state };
+      const type = location.addresstype;
+
+      if (type) {
+        geoLocation = { lat: location.lat, lon: location.lon, city: location.address[type], country: location.address.country, state: location.address.state };
         cachedSunsetSunrise = null; // flush cached times
         render(true); // force immediate transition without fade
         return;
